@@ -78,20 +78,20 @@ if [ -n "$cover_img_url" ]; then
         magick "$cover_raw" \
             -gravity North \
             -font /System/Library/Fonts/Supplemental/Georgia\ Bold.ttf \
-            -fill white -pointsize 170 \
-            -stroke black -strokewidth 4 \
+            -pointsize 170 \
+            -stroke black -strokewidth 24 -fill white \
             -annotate +0+30 "$month_name $year" \
             -stroke none -fill white \
             -annotate +0+30 "$month_name $year" \
-            -fill white -pointsize 110 \
-            -stroke black -strokewidth 3 \
+            -pointsize 110 \
+            -stroke black -strokewidth 18 -fill white \
             -annotate +0+220 "General Conference" \
             -stroke none -fill white \
             -annotate +0+220 "General Conference" \
             -gravity South \
             -font /System/Library/Fonts/Supplemental/Georgia.ttf \
-            -fill white -pointsize 72 \
-            -stroke black -strokewidth 2.5 \
+            -pointsize 72 \
+            -stroke black -strokewidth 15 -fill white \
             -annotate +0+40 "The Church of Jesus Christ\nof Latter-Day Saints" \
             -stroke none -fill white \
             -annotate +0+40 "The Church of Jesus Christ\nof Latter-Day Saints" \
