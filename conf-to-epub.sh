@@ -77,23 +77,23 @@ if [ -n "$cover_img_url" ]; then
         echo Adding text overlay to cover
         magick "$cover_raw" \
             -gravity North \
-            -font /System/Library/Fonts/Supplemental/Georgia\ Bold.ttf \
+            -font /System/Library/Fonts/Supplemental/Arial\ Bold.ttf \
             -pointsize 170 \
-            -stroke black -strokewidth 24 -fill white \
+            -stroke white -strokewidth 24 -fill black \
             -annotate +0+30 "$month_name $year" \
-            -stroke none -fill white \
+            -stroke none -fill black \
             -annotate +0+30 "$month_name $year" \
             -pointsize 110 \
-            -stroke black -strokewidth 18 -fill white \
+            -stroke white -strokewidth 18 -fill black \
             -annotate +0+220 "General Conference" \
-            -stroke none -fill white \
+            -stroke none -fill black \
             -annotate +0+220 "General Conference" \
             -gravity South \
-            -font /System/Library/Fonts/Supplemental/Georgia.ttf \
+            -font /System/Library/Fonts/Supplemental/Arial.ttf \
             -pointsize 72 \
-            -stroke black -strokewidth 15 -fill white \
+            -stroke white -strokewidth 15 -fill black \
             -annotate +0+40 "The Church of Jesus Christ\nof Latter-Day Saints" \
-            -stroke none -fill white \
+            -stroke none -fill black \
             -annotate +0+40 "The Church of Jesus Christ\nof Latter-Day Saints" \
             "$cover_file"
     else
