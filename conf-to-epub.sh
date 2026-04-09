@@ -37,6 +37,7 @@ esac
 
 base_url="https://www.churchofjesuschrist.org"
 conference_url="https://www.churchofjesuschrist.org/study/general-conference/$year/$month?lang=$language"
+script_dir="$(cd "$(dirname "$0")" && pwd)"
 build_dir="$(mktemp -d)"
 metadata_file="$build_dir/title.txt"
 build_files="$metadata_file"
@@ -98,6 +99,9 @@ for talk_path in $talk_paths; do
     # building the epub from markdown works much better than HTML, so convert to
     # markdown, removing footnotes and adding the hostname to link URLs
     talk_file="$build_dir/$name.md"
+    # strip inline background styles before converting
+    sed -e 's/background-color:[^;"]*//g' -e 's/background:[^;"]*//g' "$stage_file" > "$stage_file.tmp" && mv "$stage_file.tmp" "$stage_file"
+
     pandoc -f html -t commonmark --wrap none -o - "$stage_file" | \
         sed \
         -e 's#\[<sup>[0-9]\+</sup>\]([^)]*)##g' \
@@ -119,6 +123,7 @@ file_base="$dir/general-conference-$year-$month-$language"
 pandoc \
     --split-level 1 \
     --toc --toc-depth 1 \
+    --css "$script_dir/style.css" \
     -o "$file_base.epub" \
     $build_files
 
