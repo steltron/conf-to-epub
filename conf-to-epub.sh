@@ -56,6 +56,54 @@ if [ $? != 0 ]; then
     exit 1
 fi
 
+### DOWNLOAD COVER IMAGE ###
+
+echo Getting cover image
+listing_url="https://www.churchofjesuschrist.org/study/general-conference?lang=$language"
+cover_img_url="$(
+    curl --silent --location "$listing_url" | \
+        htmlq "a[href*='/$year/$month'] img" --attribute src | \
+        head -1 | \
+        sed 's|/full/.*|/full/!1280,/0/default|'
+)"
+
+cover_file=""
+if [ -n "$cover_img_url" ]; then
+    cover_raw="$build_dir/cover-raw.jpg"
+    cover_file="$build_dir/cover.jpg"
+    curl --silent --location "$cover_img_url" > "$cover_raw"
+
+    if command -v magick >/dev/null 2>&1; then
+        echo Adding text overlay to cover
+        magick "$cover_raw" \
+            -gravity North \
+            -font /System/Library/Fonts/Supplemental/Georgia\ Bold.ttf \
+            -fill white -pointsize 170 \
+            -stroke black -strokewidth 4 \
+            -annotate +0+30 "$month_name $year" \
+            -stroke none -fill white \
+            -annotate +0+30 "$month_name $year" \
+            -fill white -pointsize 110 \
+            -stroke black -strokewidth 3 \
+            -annotate +0+220 "General Conference" \
+            -stroke none -fill white \
+            -annotate +0+220 "General Conference" \
+            -gravity South \
+            -font /System/Library/Fonts/Supplemental/Georgia.ttf \
+            -fill white -pointsize 72 \
+            -stroke black -strokewidth 2.5 \
+            -annotate +0+40 "The Church of Jesus Christ\nof Latter-Day Saints" \
+            -stroke none -fill white \
+            -annotate +0+40 "The Church of Jesus Christ\nof Latter-Day Saints" \
+            "$cover_file"
+    else
+        echo Skipping text overlay because magick command not found
+        cover_file="$cover_raw"
+    fi
+else
+    echo Failed to find cover image, skipping
+fi
+
 ### OUTPUT METADATA ###
 
 echo Creating metadata
@@ -120,10 +168,16 @@ dir="conferences/$year/$month"
 mkdir -p "$dir"
 file_base="$dir/general-conference-$year-$month-$language"
 
+cover_args=""
+if [ -n "$cover_file" ] && [ -f "$cover_file" ]; then
+    cover_args="--epub-cover-image=$cover_file"
+fi
+
 pandoc \
     --split-level 1 \
     --toc --toc-depth 1 \
     --css "$script_dir/style.css" \
+    $cover_args \
     -o "$file_base.epub" \
     $build_files
 
