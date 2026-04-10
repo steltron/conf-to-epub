@@ -75,9 +75,10 @@ if [ -n "$cover_img_url" ]; then
 
     if command -v magick >/dev/null 2>&1; then
         echo Adding text overlay to cover
+
         magick "$cover_raw" \
             -gravity North \
-            -font /System/Library/Fonts/Supplemental/Arial\ Bold.ttf \
+            -font Helvetica-Bold \
             -pointsize 170 \
             -stroke white -strokewidth 24 -fill black \
             -annotate +0+30 "$month_name $year" \
@@ -89,12 +90,12 @@ if [ -n "$cover_img_url" ]; then
             -stroke none -fill black \
             -annotate +0+220 "General Conference" \
             -gravity South \
-            -font /System/Library/Fonts/Supplemental/Arial.ttf \
+            -font Helvetica \
             -pointsize 72 \
             -stroke white -strokewidth 15 -fill black \
-            -annotate +0+40 "The Church of Jesus Christ\nof Latter-Day Saints" \
+            -annotate +0+40 "The Church of Jesus Christ\nof Latter-day Saints" \
             -stroke none -fill black \
-            -annotate +0+40 "The Church of Jesus Christ\nof Latter-Day Saints" \
+            -annotate +0+40 "The Church of Jesus Christ\nof Latter-day Saints" \
             "$cover_file"
     else
         echo Skipping text overlay because magick command not found
@@ -147,8 +148,6 @@ for talk_path in $talk_paths; do
     # building the epub from markdown works much better than HTML, so convert to
     # markdown, removing footnotes and adding the hostname to link URLs
     talk_file="$build_dir/$name.md"
-    # strip inline background styles before converting
-    sed -e 's/background-color:[^;"]*//g' -e 's/background:[^;"]*//g' "$stage_file" > "$stage_file.tmp" && mv "$stage_file.tmp" "$stage_file"
 
     pandoc -f html -t commonmark --wrap none -o - "$stage_file" | \
         sed \
