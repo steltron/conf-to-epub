@@ -64,7 +64,7 @@ cover_img_url="$(
     curl --silent --location "$listing_url" | \
         htmlq "a[href*='/$year/$month'] img" --attribute src | \
         head -1 | \
-        sed 's|/full/.*|/full/!1280,/0/default|'
+        sed 's|/full/.*|/full/!2560,/0/default|'
 )"
 
 cover_file=""
@@ -74,29 +74,38 @@ if [ -n "$cover_img_url" ]; then
     curl --silent --location "$cover_img_url" > "$cover_raw"
 
     if command -v magick >/dev/null 2>&1; then
-        echo Adding text overlay to cover
+        echo Building cover
 
-        magick "$cover_raw" \
-            -gravity North \
-            -font Helvetica-Bold \
-            -pointsize 170 \
-            -stroke white -strokewidth 24 -fill black \
-            -annotate +0+30 "$month_name $year" \
-            -stroke none -fill black \
-            -annotate +0+30 "$month_name $year" \
-            -pointsize 110 \
-            -stroke white -strokewidth 18 -fill black \
-            -annotate +0+220 "General Conference" \
-            -stroke none -fill black \
-            -annotate +0+220 "General Conference" \
-            -gravity South \
-            -font Helvetica \
-            -pointsize 72 \
-            -stroke white -strokewidth 15 -fill black \
-            -annotate +0+40 "The Church of Jesus Christ\nof Latter-day Saints" \
-            -stroke none -fill black \
-            -annotate +0+40 "The Church of Jesus Christ\nof Latter-day Saints" \
-            "$cover_file"
+        # Kindle covers are 1:1.6. The artwork sits at the bottom, full width,
+        # and a band in the artwork's average color fills the top for the title.
+        cover_w=1600
+        cover_h=2560
+        min_band=427
+        title_font=/System/Library/Fonts/Supplemental/Didot.ttc
+        label_font=/System/Library/Fonts/Optima.ttc
+        [ -f "$title_font" ] || title_font=Times-Roman
+        [ -f "$label_font" ] || label_font=Helvetica
+
+        art_file="$build_dir/cover-art.png"
+        magick "$cover_raw" -resize "${cover_w}x" \
+            -gravity center -crop "${cover_w}x$((cover_h - min_band))+0+0" +repage \
+            "$art_file"
+        band=$((cover_h - $(magick identify -format %h "$art_file")))
+        band_color="$(magick "$cover_raw" -resize '1x1!' -modulate 45,80 -format '%[pixel:p{0,0}]' info:)"
+        month_caps="$(echo "$month_name $year" | tr '[:lower:]' '[:upper:]')"
+
+        magick -size "${cover_w}x${cover_h}" "xc:$band_color" \
+            "$art_file" -gravity South -composite \
+            -fill white -font "$title_font" -pointsize 130 \
+            -gravity North -annotate +0+$((band / 2 - 150)) "General Conference" \
+            -stroke 'rgba(255,255,255,0.6)' -strokewidth 3 \
+            -draw "line 600,$((band / 2 + 20)) 1000,$((band / 2 + 20))" -stroke none \
+            -font "$label_font" -pointsize 64 -kerning 20 \
+            -annotate +0+$((band / 2 + 60)) "$month_caps" \
+            \( -size "${cover_w}x160" 'xc:rgba(0,0,0,0.45)' \) -gravity South -composite \
+            -fill 'rgba(255,255,255,0.9)' -pointsize 36 -kerning 6 \
+            -annotate +0+62 "THE CHURCH OF JESUS CHRIST OF LATTER-DAY SAINTS" \
+            -quality 90 "$cover_file"
     else
         echo Skipping text overlay because magick command not found
         cover_file="$cover_raw"
@@ -128,16 +137,24 @@ for talk_path in $talk_paths; do
     curl --silent --location "$url" > "$html_file"
     title="$(htmlq --filename "$html_file" --text ".body h1")"
     subtitle="$(htmlq --filename "$html_file" --text ".body .subtitle")"
-    author="$(htmlq --filename "$html_file" --text ".body .byline p:first-of-type" | sed 's/By *//')"
-    author_with_role="$(htmlq --filename "$html_file" --text ".body .byline")"
+    author="$(htmlq --filename "$html_file" --text ".body .byline .author-name")"
+    [ -z "$author" ] && author="$(htmlq --filename "$html_file" --text ".body .byline p:first-of-type")"
+    role="$(htmlq --filename "$html_file" --text ".body .byline .author-role")"
+    [ -z "$role" ] && role="$(htmlq --filename "$html_file" --text ".body .byline p:nth-of-type(2)")"
     summary="$(htmlq --filename "$html_file" --text ".body .kicker")"
 
     [ -n "$subtitle" ] && title="$title $subtitle"
-    [ -z "$author" ] && author="$author_with_role"
-    [ -n "$author" ] && title="$title ($author)"
+    author="$(echo "$author" | sed 's/^By /by /')"
+    author_name="$(echo "$author" | sed -E 's/^(Presented )?[Bb]y +//')"
 
-    echo "<h1>$title</h1>" >"$stage_file"
-    [ -n "$author_with_role" ] && echo "<p><em>$author_with_role</em></p>" >>"$stage_file"
+    # the author goes in the heading so it shows in the table of contents, but
+    # style.css hides it on the page, where the byline below already shows it
+    toc_author=""
+    [ -n "$author_name" ] && toc_author=" <span class=\"toc-author\">($author_name)</span>"
+
+    echo "<h1>$title$toc_author</h1>" >"$stage_file"
+    [ -n "$author" ] && echo "<p><em>$author</em></p>" >>"$stage_file"
+    [ -n "$role" ] && echo "<p><em>$role</em></p>" >>"$stage_file"
     [ -n "$summary" ] && echo "<p><em>$summary</em><p>" >>"$stage_file"
 
     # only include body for talks, not sessions
